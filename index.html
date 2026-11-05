@@ -670,17 +670,31 @@ $("#nametag").addEventListener("input",e=>{state.nametag=e.target.value.trim().s
 
 
 /* ---------- saving ---------- */
-let saveTimer=null, saving=Promise.resolve();
+let saveTimer=null, saving=Promise.resolve(), sending=false, resend=false;
 function queueSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(save,700); }
 function save(){
   clearTimeout(saveTimer);
   if(!state.round) return Promise.resolve();
   const local=lsGet(); local[state.round.id]={placements:state.mine,submitted:state.submitted,wild:state.wild,picks:state.picks}; local.nametag=state.nametag; lsSet(local);
   if(!state.online){ $("#savenote").textContent="Saved on this device. It will reach the room once the connection is back."; return Promise.resolve(); }
-  const payload={pid:state.pid,roundId:state.round.id,name:state.nametag,placements:{...state.mine},submitted:state.submitted,wild:state.wild.filter(Boolean),picks:state.picks};
-  saving=saving.then(()=>call("saveSort",payload)
-    .then(()=>{ $("#savenote").textContent=state.submitted?"Submitted. You can still move cards; changes save.":"Saved."; })
-    .catch(e=>{ $("#savenote").textContent="Couldn’t save to the room ("+((e&&e.message)||"error")+"). Your sort is kept on this device."; }));
+  if(sending){ resend=true; return saving; } // one call at a time; the next one carries the latest state
+  sending=true;
+  saving=(async()=>{
+    let tries=0;
+    do{
+      resend=false;
+      const payload={pid:state.pid,roundId:state.round.id,name:state.nametag,placements:{...state.mine},submitted:state.submitted,wild:state.wild.filter(Boolean),picks:state.picks};
+      try{
+        await call("saveSort",payload); tries=0;
+        $("#savenote").textContent=state.submitted?"Submitted. You can still move cards; changes save.":"Saved.";
+      }catch(e){
+        const msg=(e&&e.message)||"error";
+        if(!/closed/.test(msg)&&++tries<4){ resend=true; await new Promise(r=>setTimeout(r,2000)); }
+        else $("#savenote").textContent="Couldn’t save to the room ("+msg+"). Your sort is kept on this device.";
+      }
+    }while(resend);
+    sending=false;
+  })();
   return saving;
 }
 
