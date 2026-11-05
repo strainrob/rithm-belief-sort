@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<base target="_top">
+<meta charset="utf-8">
+<title>RITHM Belief Sort</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Open+Sans:wght@400;600;700&family=Courier+Prime:wght@400;700&display=swap">
+<style>
+/* Layout: a header strip, three tabs (My sort · My pattern · The room). My sort is a
+   card stack you throw into three piles, like the Action Plan's triage; the room is a heat map of every card across the
+   three piles, sorted by how split the room is. Brand: the primer's deep extended
+   palette on Whipped Cream; one deep colour per beat as the card's suit. */
+:root{
+  --bg:#FFF6F7; --ink:#1E1A1C; --soft:#4F474B; --muted:#776E72; --card:#FFFFFF; --rule:#EADDE0; --well:#F6EBEE;
+  --pink:#FF316F; --maroon:#94002A; --indigo:#251A5A; --tealn:#0F3E48; --olive:#5C5D2A; --cocoa:#502005;
+  --peach:#FEC9B0; --lemon:#F3F46A;
+  --b1:var(--maroon); --b2:var(--indigo); --b3:var(--tealn); --b4:var(--olive);
+  --heat-ink:#FFF6F7;
+  --display:"Playfair Display",Georgia,serif; --body:"Open Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141116;--ink:#F5EEF0;--soft:#D2C7CB;--muted:#A69CA1;--card:#1F1A21;--rule:#3A3239;--well:#1A161C;
+  --b1:#FF7A9C;--b2:#B4A6FF;--b3:#7FD3E0;--b4:#D9DA6E;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141116;--ink:#F5EEF0;--soft:#D2C7CB;--muted:#A69CA1;--card:#1F1A21;--rule:#3A3239;--well:#1A161C;
+  --b1:#FF7A9C;--b2:#B4A6FF;--b3:#7FD3E0;--b4:#D9DA6E;color-scheme:dark}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance}
+p{margin:0}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--pink);outline-offset:2px}
+.eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+
+/* header */
+header{background:var(--maroon);color:#FFF6F7}
+header .wrap{padding-block:26px 0;display:grid;gap:10px}
+header .eyebrow{color:var(--peach)}
+header h1{font-size:clamp(26px,4vw,38px);line-height:1.1}
+header .sub{max-width:70ch;opacity:.9}
+.steps{display:flex;flex-wrap:wrap;gap:6px 18px;margin:2px 0 0;padding:0;list-style:none;counter-reset:s;font-size:13.5px;font-weight:600}
+.steps li{counter-increment:s;display:flex;gap:7px;align-items:center}
+.steps li::before{content:counter(s);display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#FFF6F7;color:#94002A;font-size:12px;font-weight:700}
+.tile .what{font-size:12.5px;color:var(--muted);margin-top:-2px}
+.who{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:6px}
+.who label{font-size:13px;opacity:.85}
+.who input{background:#FFF6F7;color:#1E1A1C;border:0;border-radius:4px;padding:7px 10px;min-width:200px}
+.status{font-size:12.5px;opacity:.85}
+nav.tabs{display:flex;gap:4px;margin-top:14px;overflow-x:auto}
+nav.tabs button{background:transparent;border:0;color:#FFF6F7;opacity:.75;padding:10px 14px;border-radius:6px 6px 0 0;font-weight:600;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{background:var(--bg);color:var(--ink);opacity:1}
+nav.tabs .lock{font-size:11px;font-weight:700;margin-left:6px;opacity:.7}
+
+main{padding-block:24px 64px}
+[hidden]{display:none!important}
+
+.s1{--suit:var(--b1)} .s2{--suit:var(--b2)} .s3{--suit:var(--b3)} .s4{--suit:var(--b4)}
+/* My sort: the triage stack from the Action Plan, dressed as the printed Studio Sandbox
+   belief card (lavender face, typewriter beat label, Open Sans belief; "beliefs" backs). */
+.table{display:flex;flex-direction:column;align-items:center;gap:18px;padding:6px 0 4px}
+.progress{font-size:13px;font-weight:700;color:var(--soft);letter-spacing:.02em}
+.deck{position:relative;width:min(100%,34rem);aspect-ratio:629/453}
+.scard{position:absolute;inset:0;border-radius:10px;box-shadow:0 10px 28px rgba(37,26,90,.16)}
+.scard.b2{transform:rotate(-4.5deg) translate(-10px,14px) scale(.975)}
+.scard.b1{transform:rotate(3deg) translate(9px,8px) scale(.986)}
+.back{background:radial-gradient(ellipse 75% 48% at 50% 104%,#B71864,#CA4488 38%,rgba(237,200,220,0) 78%),radial-gradient(ellipse 42% 24% at 55% -4%,#CE4A8B,rgba(228,132,181,0) 85%),#F2F0F4;padding:6% 7%}
+.back span{font-family:"Playfair Display",Georgia,serif;font-style:italic;font-size:clamp(30px,7vw,46px);color:#4A0E24}
+.face{background:#D1C5E7;color:#15183F;padding:6% 8% 8%;display:flex;flex-direction:column;justify-content:space-between;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;z-index:3}
+.face .lab{align-self:flex-end;font-family:"Courier Prime","Courier New",monospace;font-size:clamp(10px,2.4vw,13px);letter-spacing:.03em;color:#470E20;text-transform:uppercase}
+.face .bt{font-family:"Open Sans",system-ui,sans-serif;font-size:clamp(17px,4vw,25px);line-height:1.26;max-width:88%;color:#15183F}
+.face.dragging{cursor:grabbing;transition:none}
+.face.settle{transition:transform .26s cubic-bezier(.2,.8,.3,1),opacity .26s ease}
+.stamp{position:absolute;font-family:"Courier Prime","Courier New",monospace;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:5px 9px;border:2px solid currentColor;background:#D1C5E7;opacity:0;pointer-events:none;white-space:nowrap}
+.stamp.l{top:38%;left:16px;transform:rotate(-8deg);color:#4F474B}
+.stamp.r{top:38%;right:16px;transform:rotate(8deg);color:#0F3E48}
+.stamp.d{top:22%;left:50%;transform:translateX(-50%) rotate(-2deg);color:#94002A}
+.throw{display:flex;width:min(100%,34rem);margin-top:10px;border:1px solid var(--rule);border-radius:8px;overflow:hidden;background:var(--card)}
+.throw button{flex:1;appearance:none;border:0;border-right:1px solid var(--rule);background:transparent;color:var(--ink);padding:11px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;border-top:4px solid var(--colc)}
+.throw button:last-child{border-right:0}
+.throw button:hover{background:var(--well)}
+.throw button:disabled{opacity:.4;cursor:default}
+.throw .k{font-size:15px;color:var(--soft)}
+.throw [data-p="0"],.pile[data-p="0"]{--colc:var(--muted)}
+.throw [data-p="1"],.pile[data-p="1"]{--colc:var(--pink)}
+.throw [data-p="2"],.pile[data-p="2"]{--colc:var(--tealn)}
+.tnote{font-size:12px;color:var(--muted);text-align:center;max-width:34rem}
+.piles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:26px}
+.pile{background:var(--card);border-radius:8px;border-top:5px solid var(--colc);display:flex;flex-direction:column;min-width:0;transition:box-shadow .15s ease}
+.pile.hot{box-shadow:0 0 0 3px var(--colc)}
+.pile-head{padding:14px 14px 8px;display:grid;gap:2px}
+.pile-head h3{font-size:19px;line-height:1.2}
+.pile-head p{font-size:12.5px;color:var(--muted)}
+.pile-head .n{font-size:12px;font-weight:700;color:var(--soft)}
+.minis{padding:6px 10px 14px;display:flex;flex-direction:column;gap:7px;min-height:60px}
+.mini{appearance:none;border:0;border-radius:6px;background:#D1C5E7;color:#15183F;text-align:left;padding:8px 10px;font:inherit;font-size:13px;line-height:1.35;cursor:pointer;display:grid;gap:3px}
+.mini small{font-family:"Courier Prime","Courier New",monospace;font-size:10px;color:#470E20;text-transform:uppercase;letter-spacing:.03em}
+.mini:hover{box-shadow:0 0 0 2px var(--colc)}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:16px}
+/* Wild card: the deck's blank wild card, with write-ins under it once all 20 are sorted. */
+.face.wild{cursor:default;touch-action:auto;justify-content:space-between}
+.face.wild .bt{font-family:"Playfair Display",Georgia,serif;font-style:italic;font-size:clamp(18px,4vw,26px)}
+.wildbox{width:min(100%,34rem);display:grid;gap:8px;margin-top:6px}
+.wildbox label{font-weight:700;font-size:14px}
+.wildbox textarea,.mypick textarea{width:100%;border:1px solid var(--rule);border-radius:6px;padding:9px 11px;font:inherit;font-size:15px;background:var(--card);color:var(--ink);resize:vertical}
+.linkbtn{background:none;border:0;color:var(--ink);text-decoration:underline;font-weight:700;font-size:13px;padding:2px 0;justify-self:start;cursor:pointer}
+/* The pick: lavender option cards, the chosen ones outlined in maroon. */
+.pick-head{display:grid;gap:6px;max-width:720px}
+.mypicks{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:16px}
+.mypick{background:var(--card);border-left:5px solid var(--maroon);border-radius:6px;padding:12px 14px;display:grid;gap:8px}
+.mypick small,.opt small,.wl small{font-family:"Courier Prime","Courier New",monospace;font-size:10.5px;letter-spacing:.03em;text-transform:uppercase}
+.mypick .t{font-weight:600}
+.opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:20px}
+.opt{appearance:none;border:2px solid transparent;border-radius:8px;background:#D1C5E7;color:#15183F;text-align:left;padding:12px 13px;font:inherit;display:grid;gap:6px;align-content:start;cursor:pointer}
+.opt small{color:#470E20}
+.opt .t{font-size:14.5px;line-height:1.35}
+.opt .tally{font-size:11.5px;color:#3D3550}
+.opt:hover{border-color:#94002A80}
+.opt[aria-pressed="true"]{border-color:#94002A;box-shadow:0 0 0 2px #94002A;background:#E6DCF5}
+.results{margin-top:16px;background:var(--card);border-radius:8px;border-top:5px solid var(--maroon);padding:14px 18px;display:grid;gap:10px}
+.results h3{font-size:19px}
+.results>ol{margin:0;padding-left:0;list-style:none;display:grid;gap:12px}
+.pr-top{display:flex;gap:10px;align-items:baseline}
+.pr-n{flex:none;background:var(--maroon);color:#FFF6F7;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px}
+.pr-notes{margin:6px 0 0 0;padding-left:18px;font-size:13.5px;color:var(--soft);display:grid;gap:3px}
+.results.wilds{border-top-color:#D1C5E7}
+.wl{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.wl .mini{cursor:default}
+.phase{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.btn{border:0;border-radius:6px;padding:10px 16px;font-weight:700;background:var(--maroon);color:#FFF6F7}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--rule)}
+.btn:disabled{opacity:.45;cursor:default}
+.note{font-size:13px;color:var(--muted)}
+
+/* my pattern */
+.pattern{display:grid;gap:18px;max-width:820px}
+.prow{display:grid;grid-template-columns:150px minmax(0,1fr) 46px;gap:12px;align-items:center}
+.prow .lbl{font-weight:600;font-size:14px}
+.stack{display:flex;height:26px;gap:2px}
+.stack span{display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;min-width:0;overflow:hidden}
+.stack .p0{background:var(--muted);color:#fff;border-radius:4px 0 0 4px}
+.stack .p1{background:var(--pink);color:#1E1A1C}
+.stack .p2{background:var(--tealn);color:#fff;border-radius:0 4px 4px 0}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .stack .p2{background:#7FD3E0;color:#0F3E48}}
+:root[data-theme="dark"] .stack .p2{background:#7FD3E0;color:#0F3E48}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--soft)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.read{background:var(--card);border-left:4px solid var(--pink);padding:14px 16px;max-width:820px}
+
+/* the room */
+.room-top{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:end}
+.people{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12.5px;padding:4px 10px;border-radius:99px;background:var(--card);border:1px solid var(--rule)}
+.chip.done{border-color:var(--tealn)}
+.chip.done::before{content:"✓ ";color:var(--tealn);font-weight:700}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}
+.tile{background:var(--card);border-top:4px solid var(--tc);padding:12px 14px;display:grid;gap:6px;align-content:start}
+.tile h3{font-size:16px;line-height:1.25}
+.tile ol{margin:0;padding-left:18px;font-size:13px;display:grid;gap:4px;color:var(--soft)}
+.tile .empty{font-size:13px;color:var(--muted)}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:22px}
+.controls .seg{display:inline-flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.controls .seg button{border:0;background:transparent;padding:6px 11px;font-size:13px}
+.controls .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+table.heat{width:100%;border-collapse:separate;border-spacing:0 3px;margin-top:10px}
+.heat th{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:4px 8px}
+.heat th.c{text-align:center;width:13%}
+.heat td{padding:0}
+.heat .card-cell{background:var(--card);border-left:5px solid var(--suit);padding:8px 10px;font-size:14px}
+.heat .card-cell small{display:block;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--suit)}
+.heat .cell{text-align:center;font-weight:700;font-variant-numeric:tabular-nums;font-size:13.5px;border-left:2px solid var(--bg)}
+.heat .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.heat .tagc{padding:0 8px;background:var(--card);text-align:right;border-left:2px solid var(--bg);width:150px}
+.tag.split{background:var(--pink);color:#1E1A1C}
+.tag.gap{background:var(--peach);color:#502005}
+.tag.yes{background:var(--tealn);color:#fff}
+.tag.no{background:var(--muted);color:#fff}
+.heat tr.row{cursor:pointer}
+.heat tr.row:hover .card-cell{outline:1.5px solid var(--rule)}
+.heat tr.detail td{background:var(--well);padding:10px 12px;font-size:13px;color:var(--soft)}
+.heat tr.detail b{color:var(--ink)}
+.rounds{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px}
+.rounds select{font:inherit;padding:5px 8px;border-radius:6px;border:1px solid var(--rule);background:var(--card);color:var(--ink)}
+.fac{margin-top:28px;border-top:1px solid var(--rule);padding-top:16px;display:grid;gap:8px;max-width:700px}
+.fac input{border:1px solid var(--rule);border-radius:6px;padding:7px 10px;background:var(--card);min-width:220px}
+.locked{background:var(--card);padding:28px;border-radius:8px;max-width:640px;display:grid;gap:10px}
+
+@media (max-width:900px){
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:620px){
+  .piles{grid-template-columns:minmax(0,1fr)}
+  nav.tabs .lock{display:none}
+  .stamp{font-size:10px}
+  .tiles{grid-template-columns:minmax(0,1fr)}
+  .prow{grid-template-columns:minmax(0,1fr) 40px}
+  .prow .lbl{grid-column:1/-1}
+  .heat th.c{width:auto}
+  .heat .tagc{display:none}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <p class="eyebrow">The Rithm Project · Advisory Council · Creative Studio</p>
+    <h1>Where do people stand on each belief?</h1>
+    <p class="sub">Sort each card by what you see in the world today, not what you believe yourself. There are no right answers.</p>
+    <ol class="steps"><li>Sort the 20 belief cards</li><li>Add a wild card if one is missing</li><li>Submit, then see the room</li></ol>
+    <div class="who">
+      <label for="nametag">Your name</label>
+      <input id="nametag" autocomplete="name" placeholder="Type your name">
+      <span class="status" id="status">Connecting…</span>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="sort">My sort</button>
+      <button role="tab" aria-selected="false" data-tab="pattern">My pattern</button>
+      <button role="tab" aria-selected="false" data-tab="room">The room<span class="lock" id="roomlock">after you submit</span></button>
+      <button role="tab" aria-selected="false" data-tab="pick" id="picktab" hidden>Choose 1–2</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="tab-sort">
+    <div class="table">
+      <p class="progress" id="left"></p>
+      <div class="deck" id="deck"></div>
+      <div class="throw" role="group" aria-label="Sort this card">
+        <button type="button" data-p="0"><span class="k">←</span><span>Not there yet</span></button>
+        <button type="button" data-p="1"><span class="k">↓</span><span>Say it, don’t live it</span></button>
+        <button type="button" data-p="2"><span class="k">→</span><span>Already mainstream</span></button>
+      </div>
+      <p class="tnote">Drag the card left, down or right, or tap a button. Changed your mind? Tap a card in a pile to sort it again.</p>
+      <div class="wildbox" id="wildbox" hidden>
+        <label for="wild0">Write in a belief (optional)</label>
+        <textarea id="wild0" rows="2" maxlength="240" placeholder="A belief that feels essential but isn’t alive and mainstream yet"></textarea>
+        <textarea id="wild1" rows="2" maxlength="240" aria-label="Another wild card" hidden></textarea>
+        <textarea id="wild2" rows="2" maxlength="240" aria-label="A third wild card" hidden></textarea>
+        <button type="button" class="linkbtn" id="addwild">+ Add another</button>
+        <div><button type="button" class="btn" id="submit2">Submit my sort</button></div>
+      </div>
+    </div>
+    <div class="piles">
+      <div class="pile" data-p="0"><div class="pile-head"><h3>Not there yet</h3><p>Not many people believe this, or it’s debatable.</p><span class="n" id="n0"></span></div><div class="minis" id="pile-0"></div></div>
+      <div class="pile" data-p="1"><div class="pile-head"><h3>Say it, don’t live it</h3><p>Lots of people would agree, but don’t act in line with it.</p><span class="n" id="n1"></span></div><div class="minis" id="pile-1"></div></div>
+      <div class="pile" data-p="2"><div class="pile-head"><h3>Already mainstream</h3><p>Most people believe this and act on it.</p><span class="n" id="n2"></span></div><div class="minis" id="pile-2"></div></div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="submit">Submit my sort</button>
+      <button class="btn ghost" id="undo">Undo last card</button>
+      <button class="btn ghost" id="reset">Start over</button>
+      <span class="note" id="savenote"></span>
+    </div>
+  </section>
+
+  <section id="tab-pattern" hidden>
+    <div class="pattern">
+      <h2>Your pattern, beat by beat</h2>
+      <p class="note">How your placements spread across the four beats of our narrative goal.</p>
+      <div id="pattern-rows" class="pattern"></div>
+      <p class="legend"><span><i style="background:var(--muted)"></i>Not there yet</span><span><i style="background:var(--pink)"></i>Say it, don’t live it</span><span><i style="background:var(--tealn)"></i>Already mainstream</span></p>
+      <div class="read" id="pattern-read"></div>
+    </div>
+  </section>
+
+  <section id="tab-pick" hidden>
+    <div class="pick-head">
+      <h2>Choose one or two beliefs to move this year</h2>
+      <p class="note">Which beliefs could our work help become more mainstream in the next year? Tap up to two, then say in a sentence what the move would be. Each card shows how the room sorted it, starting with the least mainstream. Cards the room agreed are already mainstream are left out; the room’s wild cards are at the end.</p>
+    </div>
+    <div class="mypicks" id="mypicks"></div>
+    <p class="note" id="picknote" role="status"></p>
+    <div class="opts" id="opts"></div>
+  </section>
+
+  <section id="tab-room" hidden>
+    <div id="room-locked" class="locked">
+      <h2>Submit your sort to see the room</h2>
+      <p>The group view stays closed until you’ve made your own calls, so nobody’s sort is swayed by everyone else’s.</p>
+    </div>
+    <div id="room-open" hidden>
+      <div class="room-top">
+        <div><h2 id="room-title">The room</h2><p class="note" id="room-count"></p></div>
+        <div class="rounds"><label for="roundpick">Session</label><select id="roundpick"></select></div>
+      </div>
+      <div class="people" id="people" style="margin-top:10px"></div>
+      <div class="results" id="pickresults" hidden></div>
+      <div class="tiles" id="tiles"></div>
+      <div class="results wilds" id="wildlist" hidden></div>
+      <div class="controls">
+        <span class="note">Sort by</span>
+        <span class="seg" id="sortby">
+          <button aria-pressed="true" data-v="split">Most debated</button>
+          <button aria-pressed="false" data-v="gap">Say-do gap</button>
+          <button aria-pressed="false" data-v="beat">Beat</button>
+        </span>
+        <span class="note" style="margin-left:8px">Beat</span>
+        <span class="seg" id="beatfilter">
+          <button aria-pressed="true" data-v="0">All</button>
+          <button aria-pressed="false" data-v="1">1</button>
+          <button aria-pressed="false" data-v="2">2</button>
+          <button aria-pressed="false" data-v="3">3</button>
+          <button aria-pressed="false" data-v="4">4</button>
+        </span>
+      </div>
+      <table class="heat" aria-describedby="room-count">
+        <thead><tr><th>Belief card · darker means more of the room put it there · tap a row to see who</th><th class="c">Not there yet</th><th class="c">Say it, don’t live it</th><th class="c">Already mainstream</th><th></th></tr></thead>
+        <tbody id="heat-body"></tbody>
+      </table>
+      <div class="fac" id="fac" hidden>
+        <h3>Facilitator</h3>
+        <p class="note">Start a new session to sort fresh. Earlier sessions stay saved and can be picked from the Session menu.</p>
+        <div><input id="newround" placeholder="e.g. Advisory Council, Nov 19"> <button class="btn" id="startround">Start new session</button></div>
+        <div class="phase"><span class="note" id="phasenote"></span> <button class="btn" id="phasebtn">Open the pick</button></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+// Boot data comes from the server (Code.gs), so the card list lives in one place.
+const BOOT = {"cards": [["b1a", 1, "A healthy society needs healthy relationships between people."], ["b1b", 1, "The good parts of friendship are worth the awkward, scary, hard parts."], ["b1c", 1, "I’m not going to succeed in life without real relationships."], ["b1d", 1, "Asking for help is a gift to the person you ask."], ["b1e", 1, "Being a little bit of a burden is part of being close."], ["b2a", 2, "If we don’t pay attention to what AI is doing to our relationships, we won’t like where we end up."], ["b2b", 2, "How I use AI changes who I confide in and who I’m close to."], ["b2c", 2, "Used well, AI can help me show up better for the people in my life."], ["b2d", 2, "Every hard thing I take to AI instead of a friend is a chance to get closer that I skipped."], ["b2e", 2, "The good and the bad of AI won’t hit everyone the same."], ["b3a", 3, "I can get the good from AI without the bad. My choices decide the balance."], ["b3b", 3, "Some things are worth keeping for people, even when AI could do them faster or better."], ["b3c", 3, "When I use AI to polish what I feel and say, the people I care about get less of the real me."], ["b3d", 3, "Going to AI for comfort makes it easier to skip going to a person next time."], ["b3e", 3, "How I use AI isn’t just my business. We set the rules together, and we respect each other’s limits."], ["b4a", 4, "We won’t figure this out unless we’re honest with each other about how we actually use AI."], ["b4b", 4, "A lot of AI is built to hook our attention and our attachment. That’s a design choice, and technologists can choose differently."], ["b4c", 4, "Schools and youth spaces should be judged on whether kids belong and build relationships, not just on academics."], ["b4d", 4, "People like me can influence the people who build and govern AI."], ["b4e", 4, "A few powerful companies shouldn’t be the only ones deciding how this technology is built and spread."]], "beats": {"1": "Worth the work", "2": "AI is relational", "3": "Be intentional", "4": "Make it the easy path"}, "piles": ["Not there yet", "Say it, don’t live it", "Already mainstream"], "round": {"id": "council-2026-11-19", "label": "Advisory Council, Nov 19", "phase": "sort"}, "adminKey": ""};
+const BEATS = BOOT.beats;
+const CARDS = BOOT.cards.map(([id,beat,text])=>({id,beat,text}));
+const BYID = Object.fromEntries(CARDS.map(c=>[c.id,c]));
+const PILES = BOOT.piles;
+
+const state = {
+  pid:null, isOwner:!!BOOT.adminKey, online:false, phaseAt:0,
+  round:BOOT.round, viewRound:null,
+  mine:{}, submitted:false, nametag:"", wild:[], picks:[],
+  rows:[], rounds:{}, // rows: everyone's sorts from the sheet
+  sortby:"split", beat:0, open:null,
+};
+const $ = s=>document.querySelector(s);
+const LS = "rithm-belief-sort";
+function lsGet(){ try{return JSON.parse(localStorage.getItem(LS)||"{}")}catch(e){return {}} }
+function lsSet(v){ try{localStorage.setItem(LS,JSON.stringify(v))}catch(e){} }
+const API = "https://script.google.com/macros/s/AKfycbxUphQDLDjnBLB0-32tmSM5dXlhyr-MGM-Z8OPD5tB6PML8OtXl_s4V01mZGYo1Q9L7/exec";
+function call(fn,...args){
+  return fetch(API,{method:"POST",credentials:"omit",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({fn,args})}).then(r=>{if(!r.ok) throw new Error("HTTP "+r.status); return r.json();}).then(d=>{if(!d.ok) throw new Error(d.error||"error"); return d.result;});
+}
+
+/* ---------- my sort: one card at a time ---------- */
+let drag=null, undoStack=[], topId=null;
+const BEATNAME = b=>"Beat "+b+": "+BEATS[b];
+function el(tag,cls,text){ const e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e; }
+function unsorted(){
+  const rest=CARDS.filter(c=>state.mine[c.id]===undefined);
+  const i=rest.findIndex(c=>c.id===topId);
+  if(i>0) rest.unshift(...rest.splice(i,1));
+  return rest;
+}
+function renderBoard(){
+  const rest=unsorted(), deck=$("#deck");
+  deck.replaceChildren();
+  if(rest[2]) deck.appendChild(Object.assign(el("div","scard back b2"),{ariaHidden:"true"})).appendChild(el("span",null,"beliefs"));
+  if(rest[1]) deck.appendChild(Object.assign(el("div","scard back b1"),{ariaHidden:"true"})).appendChild(el("span",null,"beliefs"));
+  if(rest[0]){
+    const c=rest[0], f=el("div","scard face");
+    f.tabIndex=0; f.setAttribute("role","group"); f.setAttribute("aria-label","Belief card: "+c.text);
+    f.append(el("span","lab",BEATNAME(c.beat)), el("p","bt",c.text),
+      el("span","stamp l",PILES[0]), el("span","stamp d",PILES[1]), el("span","stamp r",PILES[2]));
+    deck.appendChild(f); attachDrag(f,c.id);
+  } else {
+    const f=el("div","scard face wild");
+    f.append(el("span","lab","Wild card"), el("p","bt","What other beliefs feel essential but not yet alive and mainstream?"));
+    deck.appendChild(f);
+  }
+  $(".throw").hidden=!rest.length; $(".tnote").hidden=!rest.length; $("#wildbox").hidden=!!rest.length;
+  const left=rest.length;
+  $("#left").textContent=left?`Card ${CARDS.length-left+1} of ${CARDS.length}`:"All sorted";
+  [0,1,2].forEach(p=>{
+    const list=CARDS.filter(c=>state.mine[c.id]===p);
+    $("#n"+p).textContent=list.length+" card"+(list.length===1?"":"s");
+    $("#pile-"+p).replaceChildren(...list.map(c=>{
+      const m=el("button","mini"); m.type="button"; m.title="Sort this one again";
+      m.append(el("small",null,"Beat "+c.beat), document.createTextNode(c.text));
+      m.addEventListener("click",()=>{ topId=c.id; place(c.id,null); });
+      return m;
+    }));
+  });
+  $("#undo").disabled=!undoStack.length;
+  $("#submit").textContent=$("#submit2").textContent=state.submitted?"Update my submission":"Submit my sort";
+  $("#submit").disabled=left>0;
+  $("#roomlock").hidden=state.submitted||state.isOwner;
+  renderPattern();
+}
+function place(id,p){
+  if(p===null||p===undefined) delete state.mine[id]; else { state.mine[id]=p; undoStack.push(id); }
+  renderBoard(); queueSave();
+}
+function hot(p){ document.querySelectorAll(".pile").forEach(x=>x.classList.toggle("hot",+x.dataset.p===p)); }
+function throwCard(p){
+  const f=$("#deck .face"); const c=unsorted()[0]; if(!f||!c||f.dataset.gone) return;
+  f.dataset.gone="1";
+  const to=p===0?"translate(-560px,0) rotate(-16deg)":p===2?"translate(560px,0) rotate(16deg)":"translate(0,420px) rotate(3deg)";
+  f.classList.add("settle"); f.style.transform=to; f.style.opacity="0"; hot(p);
+  setTimeout(()=>{ hot(null); if(topId===c.id) topId=null; place(c.id,p); },170);
+}
+function dirOf(dx,dy){ return dx<-95?0:dx>95?2:(dy>70&&Math.abs(dx)<=95)?1:null; }
+function attachDrag(card,id){
+  card.addEventListener("pointerdown",e=>{
+    if(e.pointerType==="mouse"&&e.button!==0) return;
+    card.setPointerCapture(e.pointerId);
+    drag={x:e.clientX,y:e.clientY,dx:0,dy:0};
+    card.classList.add("dragging"); card.classList.remove("settle");
+  });
+  card.addEventListener("pointermove",e=>{
+    if(!drag) return;
+    drag.dx=e.clientX-drag.x; drag.dy=e.clientY-drag.y;
+    card.style.transform=`translate(${drag.dx}px,${Math.max(drag.dy,-30)}px) rotate(${drag.dx/22}deg)`;
+    const s=k=>card.querySelector(".stamp."+k);
+    s("l").style.opacity=drag.dx<-14?String(Math.min(1,(-drag.dx-14)/70)):"0";
+    s("r").style.opacity=drag.dx>14?String(Math.min(1,(drag.dx-14)/70)):"0";
+    s("d").style.opacity=drag.dy>14&&Math.abs(drag.dx)<95?String(Math.min(1,(drag.dy-14)/50)):"0";
+    hot(dirOf(drag.dx,drag.dy));
+  });
+  function end(){
+    if(!drag) return;
+    const p=dirOf(drag.dx,drag.dy); drag=null; card.classList.remove("dragging");
+    if(p!==null){ throwCard(p); return; }
+    hot(null); card.classList.add("settle"); card.style.transform="";
+    card.querySelectorAll(".stamp").forEach(s=>s.style.opacity="0");
+  }
+  card.addEventListener("pointerup",end);
+  card.addEventListener("pointercancel",end);
+}
+document.querySelectorAll(".throw button").forEach(b=>b.addEventListener("click",()=>throwCard(+b.dataset.p)));
+$("#undo").addEventListener("click",()=>{ const id=undoStack.pop(); if(id){ topId=id; delete state.mine[id]; renderBoard(); queueSave(); } });
+document.addEventListener("keydown",e=>{
+  if($("#tab-sort").hidden||e.metaKey||e.ctrlKey||e.altKey) return;
+  const a=document.activeElement; if(a&&(a.tagName==="INPUT"||a.tagName==="SELECT"||a.tagName==="TEXTAREA")) return;
+  const k={ArrowLeft:0,ArrowDown:1,ArrowRight:2}[e.key];
+  if(k!==undefined&&unsorted().length){ e.preventDefault(); throwCard(k); }
+});
+
+/* ---------- my pattern ---------- */
+function renderPattern(){
+  const rows=$("#pattern-rows"); rows.replaceChildren();
+  const totals=[0,0,0];
+  for(const b of [1,2,3,4]){
+    const cs=CARDS.filter(c=>c.beat===b); const n=[0,0,0];
+    cs.forEach(c=>{const p=state.mine[c.id]; if(p!==undefined){n[p]++;totals[p]++;}});
+    const row=document.createElement("div"); row.className="prow";
+    const l=document.createElement("span"); l.className="lbl"; l.textContent=b+". "+BEATS[b];
+    const st=document.createElement("div"); st.className="stack";
+    n.forEach((k,i)=>{ if(!k) return; const s=document.createElement("span"); s.className="p"+i; s.style.flex=String(k); s.textContent=k; s.title=`${k} in “${PILES[i]}”`; st.appendChild(s);});
+    if(!n[0]&&!n[1]&&!n[2]){const s=document.createElement("span"); s.style.flex="1"; s.style.background="var(--rule)"; st.appendChild(s);}
+    const tot=document.createElement("span"); tot.className="note"; tot.textContent=(n[0]+n[1]+n[2])+"/"+cs.length;
+    row.append(l,st,tot); rows.appendChild(row);
+  }
+  const read=$("#pattern-read"); const sorted=totals.reduce((a,b)=>a+b,0);
+  if(sorted<4){read.textContent="Sort a few cards and your pattern shows up here."; return;}
+  // which beat leans furthest from mainstream, and which has the biggest say-do gap
+  const lean={},gap={};
+  for(const b of [1,2,3,4]){const ps=CARDS.filter(c=>c.beat===b).map(c=>state.mine[c.id]).filter(p=>p!==undefined);
+    if(ps.length){lean[b]=ps.reduce((a,p)=>a+p,0)/ps.length; gap[b]=ps.filter(p=>p===1).length/ps.length;}}
+  const bs=Object.keys(lean).map(Number);
+  const far=bs.sort((a,b)=>lean[a]-lean[b])[0];
+  const gapB=[...bs].sort((a,b)=>gap[b]-gap[a])[0];
+  read.textContent=`In your read, beat ${far} (${BEATS[far]}) is furthest from mainstream`+
+    (gap[gapB]>0?`, and beat ${gapB} (${BEATS[gapB]}) has the most beliefs people would agree with but don’t live.`:".");
+}
+
+/* ---------- the room ---------- */
+function roundEntries(roundId){
+  return state.rows.filter(x=>x.roundId===roundId&&Object.keys(x.placements||{}).length)
+    .map(x=>({nametag:x.name,r:{placements:x.placements,submitted:x.submitted}}));
+}
+function stats(entries){
+  return CARDS.map(c=>{
+    const ps=entries.map(e=>({who:e,p:e.r.placements[c.id]})).filter(x=>x.p===0||x.p===1||x.p===2);
+    const n=[0,0,0]; ps.forEach(x=>n[x.p]++); const N=ps.length;
+    const mean=N?(n[1]+2*n[2])/N:0;
+    const sd=N?Math.sqrt((n[0]*mean**2+n[1]*(1-mean)**2+n[2]*(2-mean)**2)/N):0;
+    const top=Math.max(...n); const share=N?top/N:0; const mode=n.indexOf(top);
+    let tag=null;
+    if(N>=2){
+      if(n[0]&&n[2]&&sd>=0.75) tag=["split","Split"];
+      else if(share>=0.66&&mode===2) tag=["yes","Agreed: mainstream"];
+      else if(share>=0.66&&mode===0) tag=["no","Agreed: not yet"];
+      else if(share>=0.5&&mode===1) tag=["gap","Say-do gap"];
+    }
+    return {c,n,N,mean,sd,share,mode,tag,ps};
+  });
+}
+function heatBg(k,N){
+  if(!N||!k) return {bg:"transparent",fg:"var(--muted)"};
+  const a=k/N; // single-hue ramp, maroon
+  return {bg:`color-mix(in oklab, var(--maroon) ${Math.round(12+a*88)}%, var(--bg))`, fg:a>0.45?"#FFF6F7":"var(--ink)"};
+}
+function renderRoom(){
+  const canSee=state.submitted||state.isOwner;
+  $("#room-locked").hidden=canSee; $("#room-open").hidden=!canSee;
+  $("#fac").hidden=!state.isOwner;
+  if(state.isOwner) showPhase();
+  if(!canSee) return;
+  const rid=state.viewRound||state.round.id;
+  // session picker: every round anyone has saved, plus the current one
+  const sel=$("#roundpick"); const known={...state.rounds,[state.round.id]:state.round.label};
+  sel.replaceChildren(...Object.entries(known).map(([id,label])=>{const o=document.createElement("option");o.value=id;o.textContent=label+(id===state.round.id?" (current)":"");o.selected=id===rid;return o;}));
+  const entries=roundEntries(rid);
+  $("#room-title").textContent=known[rid]||"The room";
+  const done=entries.filter(e=>e.r.submitted).length;
+  $("#room-count").textContent=entries.length?`${entries.length} ${entries.length===1?"person has":"people have"} sorted · ${done} submitted`:"No sorts yet in this session.";
+  const ppl=$("#people"); ppl.replaceChildren(...entries.map(e=>{const s=document.createElement("span");s.className="chip"+(e.r.submitted?" done":"");s.textContent=e.nametag||"Someone";return s;}));
+  renderRoomExtras(rid);
+  const S=stats(entries);
+  // tiles
+  const pick=(f,sort)=>S.filter(f).sort(sort).slice(0,3);
+  const tiles=[
+    ["Most debated","var(--pink)",pick(s=>s.tag&&s.tag[0]==="split",(a,b)=>b.sd-a.sd),"The room split: some said not there yet, some said mainstream."],
+    ["Biggest say-do gap","var(--peach)",pick(s=>s.N&&s.n[1]/s.N>=0.5,(a,b)=>b.n[1]/b.N-a.n[1]/a.N),"Most of the room said people agree but don’t live it."],
+    ["Agreed: already mainstream","var(--tealn)",pick(s=>s.tag&&s.tag[0]==="yes",(a,b)=>b.share-a.share),"Two-thirds or more said people believe it and act on it."],
+    ["Agreed: not there yet","var(--muted)",pick(s=>s.tag&&s.tag[0]==="no",(a,b)=>b.share-a.share),"Two-thirds or more said few people hold it yet."],
+  ];
+  $("#tiles").replaceChildren(...tiles.map(([h,col,list,what])=>{
+    const d=document.createElement("div"); d.className="tile"; d.style.setProperty("--tc",col);
+    const t=document.createElement("h3"); t.textContent=h; d.appendChild(t); d.appendChild(el("p","what",what));
+    if(!list.length){const p=document.createElement("p");p.className="empty";p.textContent=entries.length<2?"Needs at least two sorts.":"Nothing here yet.";d.appendChild(p);}
+    else{const ol=document.createElement("ol"); list.forEach(s=>{const li=document.createElement("li");li.textContent=s.c.text;ol.appendChild(li);}); d.appendChild(ol);}
+    return d;}));
+  // heat map
+  let rows=S.filter(s=>!state.beat||s.c.beat===state.beat);
+  if(state.sortby==="split") rows.sort((a,b)=>b.sd-a.sd||a.c.id.localeCompare(b.c.id));
+  else if(state.sortby==="gap") rows.sort((a,b)=>(b.N?b.n[1]/b.N:0)-(a.N?a.n[1]/a.N:0));
+  else rows.sort((a,b)=>a.c.id.localeCompare(b.c.id));
+  const tb=$("#heat-body"); tb.replaceChildren();
+  for(const s of rows){
+    const tr=document.createElement("tr"); tr.className="row"; tr.tabIndex=0;
+    const td=document.createElement("td"); td.className="card-cell s"+s.c.beat;
+    const sm=document.createElement("small"); sm.textContent="Beat "+s.c.beat; td.append(sm,document.createTextNode(s.c.text)); tr.appendChild(td);
+    s.n.forEach((k,i)=>{const c=document.createElement("td"); c.className="cell"; const h=heatBg(k,s.N); c.style.background=h.bg; c.style.color=h.fg; c.textContent=k||"·"; c.title=`${k} of ${s.N} in “${PILES[i]}”`; tr.appendChild(c);});
+    const tg=document.createElement("td"); tg.className="tagc"; if(s.tag){const sp=document.createElement("span");sp.className="tag "+s.tag[0];sp.textContent=s.tag[1];tg.appendChild(sp);} tr.appendChild(tg);
+    const toggle=()=>{state.open=state.open===s.c.id?null:s.c.id; renderRoom();};
+    tr.addEventListener("click",toggle); tr.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle();}});
+    tb.appendChild(tr);
+    if(state.open===s.c.id){
+      const dr=document.createElement("tr"); dr.className="detail"; const dd=document.createElement("td"); dd.colSpan=5;
+      [0,1,2].forEach(i=>{const names=s.ps.filter(x=>x.p===i).map(x=>x.who.nametag||"Someone");
+        const line=document.createElement("div"); const b=document.createElement("b"); b.textContent=PILES[i]+": "; line.append(b,document.createTextNode(names.length?names.join(", "):"nobody")); dd.appendChild(line);});
+      dr.appendChild(dd); tb.appendChild(dr);
+    }
+  }
+}
+
+/* ---------- wild cards: write-ins once the deck is sorted ---------- */
+const WILD_IDS=["#wild0","#wild1","#wild2"];
+function setWildInputs(){
+  WILD_IDS.forEach((s,i)=>{ $(s).value=state.wild[i]||""; $(s).hidden=i>0&&!state.wild[i]&&!state.wild[i-1]; });
+  $("#addwild").hidden=WILD_IDS.every(s=>!$(s).hidden);
+}
+WILD_IDS.forEach(s=>$(s).addEventListener("input",()=>{
+  state.wild=WILD_IDS.map(x=>$(x).value.trim().slice(0,240)); queueSave();
+}));
+$("#addwild").addEventListener("click",()=>{
+  const next=WILD_IDS.find(s=>$(s).hidden); if(next){ $(next).hidden=false; $(next).focus(); }
+  $("#addwild").hidden=WILD_IDS.every(s=>!$(s).hidden);
+});
+
+/* ---------- the pick: one or two beliefs to move this year ---------- */
+function pickOptions(){
+  const S=Object.fromEntries(stats(roundEntries(state.round.id)).map(s=>[s.c.id,s]));
+  // leave out what the room agreed is already mainstream: nothing there to move
+  const opts=CARDS.filter(c=>!(S[c.id]&&S[c.id].tag&&S[c.id].tag[0]==="yes"))
+    .map(c=>({id:c.id,text:c.text,lab:"Beat "+c.beat+": "+BEATS[c.beat],s:S[c.id]}));
+  opts.sort((a,b)=>(a.s&&a.s.N?a.s.mean:9)-(b.s&&b.s.N?b.s.mean:9)); // least mainstream first
+  const seen=new Set(CARDS.map(c=>c.text.toLowerCase()));
+  state.rows.filter(r=>r.roundId===state.round.id).forEach(r=>(r.wild||[]).forEach(w=>{
+    if(seen.has(w.toLowerCase())) return; seen.add(w.toLowerCase());
+    opts.push({id:"w",text:w,lab:"Wild card · "+(r.name||"Someone")});
+  }));
+  return opts;
+}
+const isPicked=o=>state.picks.some(p=>p.text===o.text);
+let optsSig="";
+function renderOpts(){
+  const opts=pickOptions();
+  const sig=JSON.stringify(opts.map(o=>[o.text,o.lab,o.s&&o.s.n,isPicked(o)]));
+  if(sig===optsSig) return; optsSig=sig; // redraw only on change, so a tap never lands mid-redraw
+  $("#opts").replaceChildren(...opts.map(o=>{
+    const b=el("button","opt"); b.type="button"; b.setAttribute("aria-pressed",String(isPicked(o)));
+    b.append(el("small",null,o.lab), el("span","t",o.text));
+    if(o.s&&o.s.N) b.appendChild(el("span","tally",`Room: ${o.s.n[0]} not yet · ${o.s.n[1]} say, don’t live · ${o.s.n[2]} mainstream`));
+    b.addEventListener("click",()=>{
+      if(isPicked(o)) state.picks=state.picks.filter(p=>p.text!==o.text);
+      else if(state.picks.length>=2){ $("#picknote").textContent="You can pick two. Unpick one to choose another."; return; }
+      else state.picks.push({id:o.id,text:o.text,note:""});
+      $("#picknote").textContent=""; renderOpts(); renderMyPicks(); queueSave();
+    });
+    return b;
+  }));
+}
+function renderMyPicks(){
+  const box=$("#mypicks"); box.replaceChildren();
+  if(!state.picks.length){ box.appendChild(el("p","note","Tap a card below to pick it.")); return; }
+  state.picks.forEach((p,i)=>{
+    const d=el("div","mypick");
+    d.append(el("small",null,"Your pick "+(i+1)), el("p","t",p.text));
+    const ta=el("textarea"); ta.rows=2; ta.placeholder="What would the move be? Who would we reach, and how?"; ta.value=p.note||"";
+    ta.setAttribute("aria-label","What the move would be for: "+p.text);
+    ta.addEventListener("input",()=>{ p.note=ta.value.slice(0,400); queueSave(); });
+    d.appendChild(ta); box.appendChild(d);
+  });
+}
+function showPhase(prev){
+  const pick=state.round.phase==="pick";
+  $("#picktab").hidden=!pick;
+  if(!pick&&!$("#tab-pick").hidden) document.querySelector('nav.tabs button[data-tab="room"]').click();
+  // participants on the room view move on together; the facilitator stays on the results
+  if(pick&&prev&&prev!=="pick"&&!state.isOwner&&!$("#tab-room").hidden) $("#picktab").click();
+  $("#phasenote").textContent=pick?"The pick is open. Everyone now has a “Choose 1–2” tab.":"Sorting. When the room has talked through the heat map, open the pick.";
+  $("#phasebtn").textContent=pick?"Close the pick":"Open the pick";
+}
+
+/* ---------- room: what we'd move, and the wild cards ---------- */
+function renderRoomExtras(rid){
+  const rows=state.rows.filter(r=>r.roundId===rid);
+  const tally={};
+  rows.forEach(r=>(r.picks||[]).forEach(p=>{
+    const t=tally[p.text]||(tally[p.text]={text:p.text,n:0,notes:[]});
+    t.n++; t.notes.push([r.name||"Someone",p.note]);
+  }));
+  const picked=Object.values(tally).sort((a,b)=>b.n-a.n);
+  const pr=$("#pickresults"); pr.hidden=!picked.length&&state.round.phase!=="pick"; pr.replaceChildren();
+  pr.appendChild(el("h3",null,"What we’d move this year"));
+  if(!picked.length) pr.appendChild(el("p","note","No picks yet."));
+  else{
+    const ol=el("ol");
+    picked.forEach(t=>{
+      const li=el("li"); const top=el("div","pr-top");
+      top.append(el("span","pr-n",t.n+(t.n===1?" pick":" picks")), el("span",null,t.text)); li.appendChild(top);
+      const notes=t.notes.filter(([,n])=>n);
+      if(notes.length){ const ul=el("ul","pr-notes"); notes.forEach(([who,n])=>{ const x=el("li"); x.append(el("b",null,who+": "),document.createTextNode(n)); ul.appendChild(x); }); li.appendChild(ul); }
+      ol.appendChild(li);
+    });
+    pr.appendChild(ol);
+  }
+  const wl=$("#wildlist"); const wilds=rows.flatMap(r=>(r.wild||[]).map(w=>[w,r.name||"Someone"]));
+  wl.hidden=!wilds.length; wl.replaceChildren(el("h3",null,"Wild cards from the room"));
+  const ul=el("ul","wl"); wilds.forEach(([w,who])=>{ const li=el("li","mini"); li.append(el("small",null,"Wild card · "+who),document.createTextNode(w)); ul.appendChild(li); });
+  wl.appendChild(ul);
+}
+
+/* ---------- tabs and controls ---------- */
+document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",String(x===b)));
+  ["sort","pattern","room","pick"].forEach(t=>$("#tab-"+t).hidden=t!==b.dataset.tab);
+  if(b.dataset.tab==="pick"){ renderOpts(); renderMyPicks(); }
+  if(b.dataset.tab==="room") renderRoom();
+}));
+function seg(id,key,num){document.querySelectorAll(id+" button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(id+" button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+  state[key]=num?+b.dataset.v:b.dataset.v; renderRoom();}));}
+seg("#sortby","sortby"); seg("#beatfilter","beat",true);
+$("#roundpick").addEventListener("change",e=>{state.viewRound=e.target.value; renderRoom();});
+$("#reset").addEventListener("click",()=>{ if(!confirm("Put every card back in the deck?")) return; state.mine={}; state.submitted=false; undoStack=[]; topId=null; renderBoard(); queueSave(); });
+$("#submit2").addEventListener("click",()=>$("#submit").click());
+$("#submit").addEventListener("click",async()=>{ if(!state.nametag){ $("#nametag").focus(); $("#savenote").textContent="Add your name first, so the room knows whose sort this is."; return; } state.submitted=true; renderBoard(); await save(); poll(); document.querySelector('nav.tabs button[data-tab="room"]').click(); });
+$("#nametag").addEventListener("input",e=>{state.nametag=e.target.value.trim().slice(0,60); queueSave();});
+
+
+/* ---------- saving ---------- */
+let saveTimer=null, saving=Promise.resolve();
+function queueSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(save,700); }
+function save(){
+  clearTimeout(saveTimer);
+  if(!state.round) return Promise.resolve();
+  const local=lsGet(); local[state.round.id]={placements:state.mine,submitted:state.submitted,wild:state.wild,picks:state.picks}; local.nametag=state.nametag; lsSet(local);
+  if(!state.online){ $("#savenote").textContent="Saved on this device. It will reach the room once the connection is back."; return Promise.resolve(); }
+  const payload={pid:state.pid,roundId:state.round.id,name:state.nametag,placements:{...state.mine},submitted:state.submitted,wild:state.wild.filter(Boolean),picks:state.picks};
+  saving=saving.then(()=>call("saveSort",payload)
+    .then(()=>{ $("#savenote").textContent=state.submitted?"Submitted. You can still move cards; changes save.":"Saved."; })
+    .catch(e=>{ $("#savenote").textContent="Couldn’t save to the room ("+((e&&e.message)||"error")+"). Your sort is kept on this device."; }));
+  return saving;
+}
+
+/* ---------- startup ---------- */
+function loadMine(){
+  const local=lsGet(); const r=local[state.round.id]||{};
+  const remote=state.rows.find(x=>x.mine&&x.roundId===state.round.id);
+  const src=Object.keys(r.placements||{}).length?r:(remote||{});
+  state.mine={...(src.placements||{})}; state.submitted=!!src.submitted;
+  state.wild=[...(src.wild||[])]; state.picks=(src.picks||[]).map(p=>({...p})); setWildInputs();
+  if(!state.nametag&&remote&&remote.name){ state.nametag=remote.name; $("#nametag").value=remote.name; }
+  renderBoard(); renderRoom();
+}
+function apply(s){
+  state.rows=s.rows||[];
+  const rounds={}; state.rows.forEach(r=>{rounds[r.roundId]=r.roundLabel||r.roundId;}); state.rounds=rounds;
+  const changed=!state.loaded||state.round.id!==s.round.id, prev=state.loaded&&!changed?state.round.phase:null; state.loaded=true;
+  state.round=s.round;
+  if(changed){ state.viewRound=null; loadMine(); } else renderRoom();
+  showPhase(prev);
+  if(!$("#tab-pick").hidden) renderOpts(); // tallies and new wild cards; leave the notes being typed alone
+}
+function poll(){
+  if(document.hidden) return;
+  const asked=Date.now();
+  call("getState",state.pid).then(s=>{
+    if(asked<state.phaseAt) return; // started before a phase change here; the next poll has it
+    if(!state.online){ state.online=true; $("#status").textContent="Connected. Your sort saves to the room."; }
+    apply(s);
+  }).catch(()=>{ state.online=false; $("#status").textContent="Lost the connection. Your sort is kept on this device."; });
+}
+(function boot(){
+  const local=lsGet();
+  state.pid=local.pid||(crypto.randomUUID?crypto.randomUUID():String(Date.now())+"-"+Math.random().toString(36).slice(2,10));
+  if(!local.pid){ local.pid=state.pid; lsSet(local); }
+  state.nametag=local.nametag||""; $("#nametag").value=state.nametag;
+  loadMine();
+  const fkey=new URLSearchParams(location.hash.slice(1)).get("key");
+  if(fkey){
+    history.replaceState(null,"",location.pathname+location.search); // keep the key out of the address bar
+    call("checkKey",fkey).then(ok=>{ if(ok){ BOOT.adminKey=fkey; state.isOwner=true; renderRoom(); showPhase(); } });
+  }
+  const t=setTimeout(()=>{ if(!state.online) $("#status").textContent="The room hasn’t answered yet. Keep sorting; it saves on this device."; },10000);
+  call("getState",state.pid).then(s=>{
+    clearTimeout(t); state.online=true;
+    $("#status").textContent="Connected. Your sort saves to the room.";
+    apply(s);
+    if(Object.keys(state.mine).length) queueSave(); // push anything sorted before the connection came up
+  }).catch(e=>{ clearTimeout(t); $("#status").textContent="Couldn’t reach the room ("+((e&&e.message)||"error")+"). Your sort is kept on this device."; });
+  setInterval(poll,5000);
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden) poll(); });
+  $("#phasebtn").addEventListener("click",()=>{
+    const to=state.round.phase==="pick"?"sort":"pick", prev=state.round.phase;
+    state.phaseAt=Date.now();
+    call("setPhase",BOOT.adminKey,to).then(r=>{ state.phaseAt=Date.now(); state.round=r; showPhase(prev); renderRoom(); })
+      .catch(e=>alert("Couldn’t change the phase: "+((e&&e.message)||"error")));
+  });
+  $("#startround").addEventListener("click",()=>{
+    const label=$("#newround").value.trim(); if(!label) return;
+    call("startRound",BOOT.adminKey,label).then(r=>{ $("#newround").value=""; apply({round:r,rows:state.rows}); })
+      .catch(e=>alert("Couldn’t start the session: "+((e&&e.message)||"error")));
+  });
+})();
+</script>
+</body>
+</html>
