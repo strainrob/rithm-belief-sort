@@ -169,6 +169,13 @@ main{padding-block:24px 64px}
 .chip.done{border-color:var(--tealn)}
 .chip.done::before{content:"✓ ";color:var(--tealn);font-weight:700}
 .tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}
+.beatheat{margin-top:16px;background:var(--card);padding:14px 16px 10px}
+.beatheat h3{font-size:16px;margin:0 0 2px}
+.beatheat .heat{margin-top:6px}
+.beatheat .heat .card-cell{font-weight:700;font-size:14.5px}
+.beatheat .heat .cell{font-size:17px;padding:10px 4px;line-height:1.15}
+.beatheat .heat .cell small{display:block;font-size:11px;font-weight:600;opacity:.85}
+.heat tr.ghead td{padding:14px 4px 2px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--suit)}
 .tile{background:var(--card);border-top:4px solid var(--tc);padding:12px 14px;display:grid;gap:6px;align-content:start}
 .tile h3{font-size:16px;line-height:1.25}
 .tile ol{margin:0;padding-left:18px;font-size:13px;display:grid;gap:4px;color:var(--soft)}
@@ -308,14 +315,15 @@ table.heat{width:100%;border-collapse:separate;border-spacing:0 3px;margin-top:1
       </div>
       <div class="people" id="people" style="margin-top:10px"></div>
       <div class="results" id="pickresults" hidden></div>
+      <div class="beatheat" id="beatheat"></div>
       <div class="tiles" id="tiles"></div>
       <div class="results wilds" id="wildlist" hidden></div>
       <div class="controls">
         <span class="note">Sort by</span>
         <span class="seg" id="sortby">
-          <button aria-pressed="true" data-v="split">Most debated</button>
+          <button aria-pressed="true" data-v="beat">Beat</button>
+          <button aria-pressed="false" data-v="split">Most debated</button>
           <button aria-pressed="false" data-v="gap">Say-do gap</button>
-          <button aria-pressed="false" data-v="beat">Beat</button>
         </span>
         <span class="note" style="margin-left:8px">Beat</span>
         <span class="seg" id="beatfilter">
@@ -353,7 +361,7 @@ const state = {
   round:BOOT.round, viewRound:null,
   mine:{}, submitted:false, nametag:"", wild:[], picks:[],
   rows:[], rounds:{}, // rows: everyone's sorts from the sheet
-  sortby:"split", beat:0, open:null,
+  sortby:"beat", beat:0, open:null,
 };
 const $ = s=>document.querySelector(s);
 const LS = "rithm-belief-sort";
@@ -530,6 +538,22 @@ function renderRoom(){
   const ppl=$("#people"); ppl.replaceChildren(...entries.map(e=>{const s=document.createElement("span");s.className="chip"+(e.r.submitted?" done":"");s.textContent=e.nametag||"Someone";return s;}));
   renderRoomExtras(rid);
   const S=stats(entries);
+  // beat-level heat map: every placement of a beat's five cards, pooled
+  const bh=$("#beatheat"); bh.replaceChildren();
+  if(entries.length){
+    const h=document.createElement("h3"); h.textContent="By beat"; bh.appendChild(h);
+    bh.appendChild(el("p","note","All five cards in each beat, pooled. Darker means more of the room put that beat's cards there."));
+    const t=document.createElement("table"); t.className="heat";
+    t.innerHTML=`<thead><tr><th>Beat</th><th class="c">${PILES[0]}</th><th class="c">${PILES[1]}</th><th class="c">${PILES[2]}</th></tr></thead>`;
+    const body=document.createElement("tbody");
+    [1,2,3,4].forEach(b=>{
+      const n=[0,0,0]; S.filter(s=>s.c.beat===b).forEach(s=>{n[0]+=s.n[0];n[1]+=s.n[1];n[2]+=s.n[2];}); const N=n[0]+n[1]+n[2];
+      const tr=document.createElement("tr"); const td=document.createElement("td"); td.className="card-cell s"+b; td.textContent=b+". "+BEATS[b]; tr.appendChild(td);
+      n.forEach((k,i)=>{const c=document.createElement("td"); c.className="cell"; const hb=heatBg(k,N); c.style.background=hb.bg; c.style.color=hb.fg;
+        c.textContent=N?Math.round(100*k/N)+"%":"·"; if(N){const sm=document.createElement("small"); sm.textContent=k+" of "+N; c.appendChild(sm);} c.title=`${k} of ${N} placements in “${PILES[i]}”`; tr.appendChild(c);});
+      body.appendChild(tr);});
+    t.appendChild(body); bh.appendChild(t);
+  }
   // tiles
   const pick=(f,sort)=>S.filter(f).sort(sort).slice(0,3);
   const tiles=[
@@ -550,10 +574,12 @@ function renderRoom(){
   else if(state.sortby==="gap") rows.sort((a,b)=>(b.N?b.n[1]/b.N:0)-(a.N?a.n[1]/a.N:0));
   else rows.sort((a,b)=>a.c.id.localeCompare(b.c.id));
   const tb=$("#heat-body"); tb.replaceChildren();
+  const grouped=state.sortby==="beat"; let lastBeat=0;
   for(const s of rows){
+    if(grouped&&s.c.beat!==lastBeat){ lastBeat=s.c.beat; const gr=document.createElement("tr"); gr.className="ghead s"+s.c.beat; const gd=document.createElement("td"); gd.colSpan=5; gd.textContent="Beat "+s.c.beat+": "+BEATS[s.c.beat]; gr.appendChild(gd); tb.appendChild(gr); }
     const tr=document.createElement("tr"); tr.className="row"; tr.tabIndex=0;
     const td=document.createElement("td"); td.className="card-cell s"+s.c.beat;
-    const sm=document.createElement("small"); sm.textContent=BEATNAME(s.c.beat); td.append(sm,document.createTextNode(s.c.text)); tr.appendChild(td);
+    if(!grouped){const sm=document.createElement("small"); sm.textContent=BEATNAME(s.c.beat); td.append(sm);} td.append(document.createTextNode(s.c.text)); tr.appendChild(td);
     s.n.forEach((k,i)=>{const c=document.createElement("td"); c.className="cell"; const h=heatBg(k,s.N); c.style.background=h.bg; c.style.color=h.fg; c.textContent=k||"·"; c.title=`${k} of ${s.N} in “${PILES[i]}”`; tr.appendChild(c);});
     const tg=document.createElement("td"); tg.className="tagc"; if(s.tag){const sp=document.createElement("span");sp.className="tag "+s.tag[0];sp.textContent=s.tag[1];tg.appendChild(sp);} tr.appendChild(tg);
     const toggle=()=>{state.open=state.open===s.c.id?null:s.c.id; renderRoom();};
