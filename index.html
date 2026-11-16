@@ -48,6 +48,15 @@ header .sub{max-width:70ch;opacity:.9}
 .steps{display:flex;flex-wrap:wrap;gap:6px 18px;margin:2px 0 0;padding:0;list-style:none;counter-reset:s;font-size:13.5px;font-weight:600}
 .steps li{counter-increment:s;display:flex;gap:7px;align-items:center}
 .steps li::before{content:counter(s);display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#FFF6F7;color:#94002A;font-size:12px;font-weight:700}
+.beatkey{font-size:13px;background:rgba(255,246,247,.10);border-radius:6px;padding:7px 10px;max-width:900px}
+.beatkey summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;list-style:none}
+.beatkey summary::-webkit-details-marker{display:none}
+.beatkey .bk-t{font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:11.5px;color:var(--peach)}
+.beatkey .bk-l b{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;background:#FFF6F7;color:#94002A;font-size:10.5px;margin:0 3px 0 8px}
+.beatkey .bk-l b:first-child{margin-left:0}
+.beatkey .bk-more{text-decoration:underline;opacity:.85;font-size:12.5px}
+.beatkey[open] .bk-more{display:none}
+.beatkey ol{margin:8px 0 2px;padding-left:20px;display:grid;gap:4px;max-width:75ch}
 .tile .what{font-size:12.5px;color:var(--muted);margin-top:-2px}
 .who{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:6px}
 .who label{font-size:13px;opacity:.85}
@@ -210,10 +219,16 @@ table.heat{width:100%;border-collapse:separate;border-spacing:0 3px;margin-top:1
 
 <header>
   <div class="wrap">
-    <p class="eyebrow">The Rithm Project · Advisory Council · Creative Studio</p>
     <h1>Where do people stand on each belief?</h1>
     <p class="sub">Sort each card by what you see in the world today, not what you believe yourself. There are no right answers.</p>
-    <ol class="steps"><li>Sort the 20 belief cards</li><li>Add a wild card if one is missing</li><li>Submit, then see the room</li></ol>
+    <details class="beatkey"><summary><span class="bk-t">The four beats</span> <span class="bk-l"><b>1</b> Worth the work <b>2</b> AI is relational <b>3</b> Be intentional <b>4</b> Make it the easy path</span> <span class="bk-more">What do they mean?</span></summary>
+      <ol>
+        <li><b>Worth the work.</b> Relationships are essential and worth the work.</li>
+        <li><b>AI is relational.</b> AI will have a profound impact on relationships, for better and worse.</li>
+        <li><b>Be intentional.</b> How AI affects our relationships depends on how we choose to use it, and where we choose not to.</li>
+        <li><b>Make it the easy path.</b> Individual care only goes so far. We have to change the systems that make a healthy relationship with AI hard to choose.</li>
+      </ol>
+    </details>
     <div class="who">
       <label for="nametag">Your name</label>
       <input id="nametag" autocomplete="name" placeholder="Type your name">
@@ -238,7 +253,7 @@ table.heat{width:100%;border-collapse:separate;border-spacing:0 3px;margin-top:1
         <button type="button" data-p="1"><span class="k">↓</span><span>Say it, don’t live it</span></button>
         <button type="button" data-p="2"><span class="k">→</span><span>Already mainstream</span></button>
       </div>
-      <p class="tnote">Drag the card left, down or right, or tap a button. Changed your mind? Tap a card in a pile to sort it again.</p>
+      <p class="tnote">Drag or tap. Tap a sorted card to move it.</p>
       <div class="wildbox" id="wildbox" hidden>
         <label for="wild0">Write in a belief (optional)</label>
         <textarea id="wild0" rows="2" maxlength="240" placeholder="A belief that feels essential but isn’t alive and mainstream yet"></textarea>
@@ -305,14 +320,14 @@ table.heat{width:100%;border-collapse:separate;border-spacing:0 3px;margin-top:1
         <span class="note" style="margin-left:8px">Beat</span>
         <span class="seg" id="beatfilter">
           <button aria-pressed="true" data-v="0">All</button>
-          <button aria-pressed="false" data-v="1">1</button>
-          <button aria-pressed="false" data-v="2">2</button>
-          <button aria-pressed="false" data-v="3">3</button>
-          <button aria-pressed="false" data-v="4">4</button>
+          <button aria-pressed="false" data-v="1">1 · Worth the work</button>
+          <button aria-pressed="false" data-v="2">2 · AI is relational</button>
+          <button aria-pressed="false" data-v="3">3 · Be intentional</button>
+          <button aria-pressed="false" data-v="4">4 · Make it the easy path</button>
         </span>
       </div>
       <table class="heat" aria-describedby="room-count">
-        <thead><tr><th>Belief card · darker means more of the room put it there · tap a row to see who</th><th class="c">Not there yet</th><th class="c">Say it, don’t live it</th><th class="c">Already mainstream</th><th></th></tr></thead>
+        <thead><tr><th>Belief · tap a row to see who</th><th class="c">Not there yet</th><th class="c">Say it, don’t live it</th><th class="c">Already mainstream</th><th></th></tr></thead>
         <tbody id="heat-body"></tbody>
       </table>
       <div class="fac" id="fac" hidden>
@@ -383,7 +398,7 @@ function renderBoard(){
     $("#n"+p).textContent=list.length+" card"+(list.length===1?"":"s");
     $("#pile-"+p).replaceChildren(...list.map(c=>{
       const m=el("button","mini"); m.type="button"; m.title="Sort this one again";
-      m.append(el("small",null,"Beat "+c.beat), document.createTextNode(c.text));
+      m.append(el("small",null,BEATNAME(c.beat)), document.createTextNode(c.text));
       m.addEventListener("click",()=>{ topId=c.id; place(c.id,null); });
       return m;
     }));
@@ -538,7 +553,7 @@ function renderRoom(){
   for(const s of rows){
     const tr=document.createElement("tr"); tr.className="row"; tr.tabIndex=0;
     const td=document.createElement("td"); td.className="card-cell s"+s.c.beat;
-    const sm=document.createElement("small"); sm.textContent="Beat "+s.c.beat; td.append(sm,document.createTextNode(s.c.text)); tr.appendChild(td);
+    const sm=document.createElement("small"); sm.textContent=BEATNAME(s.c.beat); td.append(sm,document.createTextNode(s.c.text)); tr.appendChild(td);
     s.n.forEach((k,i)=>{const c=document.createElement("td"); c.className="cell"; const h=heatBg(k,s.N); c.style.background=h.bg; c.style.color=h.fg; c.textContent=k||"·"; c.title=`${k} of ${s.N} in “${PILES[i]}”`; tr.appendChild(c);});
     const tg=document.createElement("td"); tg.className="tagc"; if(s.tag){const sp=document.createElement("span");sp.className="tag "+s.tag[0];sp.textContent=s.tag[1];tg.appendChild(sp);} tr.appendChild(tg);
     const toggle=()=>{state.open=state.open===s.c.id?null:s.c.id; renderRoom();};
