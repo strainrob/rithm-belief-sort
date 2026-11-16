@@ -168,7 +168,7 @@ main{padding-block:24px 64px}
 .chip{font-size:12.5px;padding:4px 10px;border-radius:99px;background:var(--card);border:1px solid var(--rule)}
 .chip.done{border-color:var(--tealn)}
 .chip.done::before{content:"✓ ";color:var(--tealn);font-weight:700}
-.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:16px}
 .beatheat{margin-top:16px;background:var(--card);padding:14px 16px 10px}
 .beatheat h3{font-size:16px;margin:0 0 2px}
 .beatheat .heat{margin-top:6px}
@@ -176,6 +176,10 @@ main{padding-block:24px 64px}
 .beatheat .heat .cell{font-size:17px;padding:10px 4px;line-height:1.15}
 .beatheat .heat .cell small{display:block;font-size:11px;font-weight:600;opacity:.85}
 .heat tr.ghead td{padding:14px 4px 2px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--suit)}
+.allcards{margin-top:22px}
+.allcards>summary{cursor:pointer;display:inline-block;font-weight:700;font-size:14px;color:var(--maroon);border:1.5px solid var(--maroon);border-radius:6px;padding:7px 14px;list-style:none}
+.allcards>summary::-webkit-details-marker{display:none}
+.allcards[open]>summary{margin-bottom:4px}
 .tile{background:var(--card);border-top:4px solid var(--tc);padding:12px 14px;display:grid;gap:6px;align-content:start}
 .tile h3{font-size:16px;line-height:1.25}
 .tile ol{margin:0;padding-left:18px;font-size:13px;display:grid;gap:4px;color:var(--soft)}
@@ -318,6 +322,7 @@ table.heat{width:100%;border-collapse:separate;border-spacing:0 3px;margin-top:1
       <div class="beatheat" id="beatheat"></div>
       <div class="tiles" id="tiles"></div>
       <div class="results wilds" id="wildlist" hidden></div>
+      <details class="allcards"><summary>See all 20 cards</summary>
       <div class="controls">
         <span class="note">Sort by</span>
         <span class="seg" id="sortby">
@@ -338,6 +343,7 @@ table.heat{width:100%;border-collapse:separate;border-spacing:0 3px;margin-top:1
         <thead><tr><th>Belief · tap a row to see who</th><th class="c">Not there yet</th><th class="c">Say it, don’t live it</th><th class="c">Already mainstream</th><th></th></tr></thead>
         <tbody id="heat-body"></tbody>
       </table>
+      </details>
       <div class="fac" id="fac" hidden>
         <h3>Facilitator</h3>
         <p class="note">Start a new session to sort fresh. Earlier sessions stay saved and can be picked from the Session menu.</p>
@@ -350,7 +356,7 @@ table.heat{width:100%;border-collapse:separate;border-spacing:0 3px;margin-top:1
 
 <script>
 // Boot data comes from the server (Code.gs), so the card list lives in one place.
-const BOOT = {"cards": [["b1a", 1, "A healthy society needs healthy relationships between people."], ["b1b", 1, "The good parts of friendship are worth the awkward, scary, hard parts."], ["b1c", 1, "I’m not going to succeed in life without real relationships."], ["b1d", 1, "Asking for help is a gift to the person you ask."], ["b1e", 1, "Being a little bit of a burden is part of being close."], ["b2a", 2, "If we don’t pay attention to what AI is doing to our relationships, we won’t like where we end up."], ["b2b", 2, "How I use AI changes who I confide in and who I’m close to."], ["b2c", 2, "Used well, AI can help me show up better for the people in my life."], ["b2d", 2, "Every hard thing I take to AI instead of a friend is a chance to get closer that I skipped."], ["b2e", 2, "The good and the bad of AI won’t hit everyone the same."], ["b3a", 3, "I can get the good from AI without the bad. My choices decide the balance."], ["b3b", 3, "Some things are worth keeping for people, even when AI could do them faster or better."], ["b3c", 3, "When I use AI to polish what I feel and say, the people I care about get less of the real me."], ["b3d", 3, "Going to AI for comfort makes it easier to skip going to a person next time."], ["b3e", 3, "How I use AI isn’t just my business. We set the rules together, and we respect each other’s limits."], ["b4a", 4, "We won’t figure this out unless we’re honest with each other about how we actually use AI."], ["b4b", 4, "A lot of AI is built to hook our attention and our attachment. That’s a design choice, and technologists can choose differently."], ["b4c", 4, "Schools and youth spaces should be judged on whether kids belong and build relationships, not just on academics."], ["b4d", 4, "People like me can influence the people who build and govern AI."], ["b4e", 4, "A few powerful companies shouldn’t be the only ones deciding how this technology is built and spread."]], "beats": {"1": "Worth the work", "2": "AI is relational", "3": "Be intentional", "4": "Make it the easy path"}, "piles": ["Not there yet", "Say it, don’t live it", "Already mainstream"], "round": {"id": "council-2026-11-19", "label": "Advisory Council, Nov 19", "phase": "sort"}, "adminKey": ""};
+const BOOT = {"cards": [["b1a", 1, "A healthy society needs healthy relationships between people."], ["b1b", 1, "The good parts of friendship are worth the awkward, scary, hard parts."], ["b1c", 1, "I’m not going to succeed in life without real relationships."], ["b1d", 1, "Asking for help is a gift to the person you ask."], ["b1e", 1, "Being a little bit of a burden is part of being close."], ["b2a", 2, "If we don’t pay attention to what AI is doing to our relationships, we won’t like where we end up."], ["b2b", 2, "How I use AI changes who I confide in and who I’m close to."], ["b2c", 2, "Used well, AI can help me show up better for the people in my life."], ["b2d", 2, "Every hard thing I take to AI instead of a friend is a chance to get closer that I skipped."], ["b2e", 2, "The good and the bad of AI won’t hit everyone the same."], ["b3a", 3, "I can get the good from AI without the bad. My choices decide the balance."], ["b3b", 3, "Some things are worth keeping for people, even when AI could do them faster or better."], ["b3c", 3, "When I use AI to polish what I feel and say, the people I care about get less of the real me."], ["b3d", 3, "Going to AI for comfort makes it easier to skip going to a person next time."], ["b3e", 3, "How I use AI isn’t just my business. The people close to me and I set the rules together, and we respect each other’s limits."], ["b4a", 4, "We won’t figure this out unless we’re honest with each other about how we actually use AI."], ["b4b", 4, "A lot of AI is built to hook our attention and our attachment. That’s a design choice, and technologists can choose differently."], ["b4c", 4, "Schools and youth spaces should be judged on whether kids belong and build relationships, not just on academics."], ["b4d", 4, "People like me can influence the people who build and govern AI."], ["b4e", 4, "A few powerful companies shouldn’t be the only ones deciding how this technology is built and spread."]], "beats": {"1": "Worth the work", "2": "AI is relational", "3": "Be intentional", "4": "Make it the easy path"}, "piles": ["Not there yet", "Say it, don’t live it", "Already mainstream"], "round": {"id": "council-2026-11-19", "label": "Advisory Council, Nov 19", "phase": "sort"}, "adminKey": ""};
 const BEATS = BOOT.beats;
 const CARDS = BOOT.cards.map(([id,beat,text])=>({id,beat,text}));
 const BYID = Object.fromEntries(CARDS.map(c=>[c.id,c]));
@@ -555,12 +561,11 @@ function renderRoom(){
     t.appendChild(body); bh.appendChild(t);
   }
   // tiles
-  const pick=(f,sort)=>S.filter(f).sort(sort).slice(0,3);
+  const pick=(f,sort)=>S.filter(f).sort(sort).slice(0,2);
   const tiles=[
     ["Most debated","var(--pink)",pick(s=>s.tag&&s.tag[0]==="split",(a,b)=>b.sd-a.sd),"The room split: some said not there yet, some said mainstream."],
     ["Biggest say-do gap","var(--peach)",pick(s=>s.N&&s.n[1]/s.N>=0.5,(a,b)=>b.n[1]/b.N-a.n[1]/a.N),"Most of the room said people agree but don’t live it."],
     ["Agreed: already mainstream","var(--tealn)",pick(s=>s.tag&&s.tag[0]==="yes",(a,b)=>b.share-a.share),"Two-thirds or more said people believe it and act on it."],
-    ["Agreed: not there yet","var(--muted)",pick(s=>s.tag&&s.tag[0]==="no",(a,b)=>b.share-a.share),"Two-thirds or more said few people hold it yet."],
   ];
   $("#tiles").replaceChildren(...tiles.map(([h,col,list,what])=>{
     const d=document.createElement("div"); d.className="tile"; d.style.setProperty("--tc",col);
